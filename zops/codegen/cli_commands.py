@@ -5,6 +5,47 @@ import click
 import yaml
 
 
+@click.command(name="new_apply")
+@click.argument("location")
+def codegen_new_apply(location):
+    with open(location, "r") as iss:
+        try:
+            spec = yaml.safe_load(iss)
+        except yaml.YAMLError as e:
+            print("ERROR", e)
+            raise
+
+    template_dir = f"{os.path.dirname(location)}/templates"
+    template_engine = TemplateEngine.get()
+
+    templates = spec["zops.codegen"]["templates"]
+    datasets = spec["zops.codegen"]["datasets"]
+
+    for i_template in templates:
+        dataset_index = i_template.get('dataset', "")
+        filenames = i_template['filenames']
+        for j_name, j_values in _get_dataset_items(datasets, dataset_index):
+            click.echo(f"{dataset_index}::{j_name}")
+            for k_filename in filenames:
+                filename = k_filename.replace("__name__", j_name)
+                click.echo(f"  * {filename}")
+                contents = template_engine.expand(
+                    open(f"{template_dir}/{k_filename}", "r").read(),
+                    j_values
+                )
+                _create_file(filename, contents)
+
+
+def _get_dataset_items(datasets, dataset_index):
+    if dataset_index in ("", "."):
+        return [(".", datasets.copy())]
+
+    result = datasets[dataset_index].items()
+    for i_name, i_values in result:
+        i_values["name"] = i_name
+    return result
+
+
 @click.command(name="apply")
 @click.argument("location")
 def codegen_apply(location):
@@ -238,6 +279,16 @@ class TemplateEngine(object):
             return [i.get(key) for i in lst]
 
         env.filters["dvalues"] = dvalues
+
+        def d_items_str(dct, skip=[]):
+            return ["{}{}".format(i, j) for i, j in dct.items() if i not in skip]
+
+        env.filters["d_items_str"] = d_items_str
+
+        def d_values_str(dct, skip=[]):
+            return [str(j) for i, j in dct.items() if i not in skip]
+
+        env.filters["d_values_str"] = d_values_str
 
         result = expandit(text)
         return result

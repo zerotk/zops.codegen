@@ -29,6 +29,7 @@ setup(
     install_requires=[
         "zerotk.lib",
         "zerotk.zops",
+        "stringcase",
     ],
     dependency_links=[],
     setup_requires=["setuptools_scm"],

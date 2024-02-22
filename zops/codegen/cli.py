@@ -10,4 +10,5 @@ def main():
     """
 
 
+main.add_command(commands.codegen_new_apply)
 main.add_command(commands.codegen_apply)
